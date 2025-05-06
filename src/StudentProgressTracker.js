@@ -178,6 +178,24 @@ const StudentProgressTracker = () => {
       </div>
     );
   }
+ const renderRankTable = (student, index) => {
+    const total = tests.reduce((sum, test) => {
+      return sum + (student.marks[test.title] || 0);
+    }, 0);
+    const maxTotal = tests.reduce((sum, test) => sum + test.maxMarks, 0);
+    const percentage = maxTotal ? ((total / maxTotal) * 100).toFixed(2) : "0.00";
+  
+    return (
+      <tr key={student.roll}>
+        <td>{index + 1}</td>
+        <td>{student.roll}</td>
+        <td>{student.name}</td>
+        <td>{total}</td>
+        <td>{maxTotal}</td>
+        <td>{percentage}</td>
+      </tr>
+    );
+  };
 
   return (
     <div style={{ padding: "20px", fontFamily: "Arial" }}>
