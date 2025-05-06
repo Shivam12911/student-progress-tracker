@@ -97,7 +97,7 @@ const StudentProgressTracker = () => {
     setStudents(updated);
   };
 
-  const renderRankTable = () => {
+  const getStudentRank = (roll) => {
     const rankList = students.map(student => {
       let total = 0;
       let maxTotal = 0;
@@ -107,25 +107,70 @@ const StudentProgressTracker = () => {
           maxTotal += test.maxMarks;
         }
       });
-      const percentage = maxTotal ? ((total / maxTotal) * 100).toFixed(2) : "0.00";
-      return { name: student.name, roll: student.roll, total, maxTotal, percentage };
+      return { ...student, total, maxTotal };
     });
 
     rankList.sort((a, b) => b.total - a.total);
-
-    return rankList.map((r, i) => (
-      <tr key={r.roll} style={{ backgroundColor: i === 0 ? "#d4edda" : "inherit" }}>
-        <td>{i + 1}</td>
-        <td>{r.roll}</td>
-        <td>{r.name}</td>
-        <td>{r.total}</td>
-        <td>{r.maxTotal}</td>
-        <td>{r.percentage}%</td>
-      </tr>
-    ));
+    return rankList.findIndex(r => r.roll === roll) + 1;
   };
 
-  const selectedTestObj = tests.find(t => t.title === selectedTest);
+  const renderStudentProgress = () => {
+    if (!queriedStudent) return <p>No student found.</p>;
+
+    const data = tests.map(test => ({
+      name: test.title,
+      Marks: queriedStudent.marks[test.title] ?? 0,
+      Max: test.maxMarks
+    }));
+
+    const total = data.reduce((sum, d) => sum + d.Marks, 0);
+    const maxTotal = data.reduce((sum, d) => sum + d.Max, 0);
+    const percentage = maxTotal ? ((total / maxTotal) * 100).toFixed(2) : "0.00";
+    const pass = percentage >= 33;
+    const rank = getStudentRank(queriedStudent.roll);
+
+    return (
+      <div>
+        <h2>Welcome, {queriedStudent.name}</h2>
+        <p>Total Marks: {total}</p>
+        <p>Maximum Marks: {maxTotal}</p>
+        <p>Percentage: {percentage}%</p>
+        <p>Status: {pass ? "Pass" : "Fail"}</p>
+        <p>Your Rank: {rank}</p>
+
+        <h3>Progress Graph</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+            <Line type="monotone" dataKey="Marks" stroke="#8884d8" />
+          </LineChart>
+        </ResponsiveContainer>
+
+        <h3>Marks Table</h3>
+        <table border="1" cellPadding="5">
+          <thead>
+            <tr>
+              <th>Test</th>
+              <th>Marks</th>
+              <th>Max Marks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((d, i) => (
+              <tr key={i}>
+                <td>{d.name}</td>
+                <td>{d.Marks}</td>
+                <td>{d.Max}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   if (!role) {
     return (
@@ -178,7 +223,8 @@ const StudentProgressTracker = () => {
       </div>
     );
   }
- const renderRankTable = (student, index) => {
+
+  const renderRankTable = (student, index) => {
     const total = tests.reduce((sum, test) => {
       return sum + (student.marks[test.title] || 0);
     }, 0);
@@ -196,6 +242,7 @@ const StudentProgressTracker = () => {
       </tr>
     );
   };
+  
 
   return (
     <div style={{ padding: "20px", fontFamily: "Arial" }}>
@@ -301,59 +348,11 @@ const StudentProgressTracker = () => {
                 <th>%</th>
               </tr>
             </thead>
-            <tbody>{renderRankTable()}</tbody>
+            <tbody>{students.map(renderRankTable)}</tbody>
           </table>
         </>
       ) : (
-        queriedStudent ? (
-          <>
-            <h2>Welcome, {queriedStudent.name} ({queriedStudent.roll})</h2>
-            <h3>Your Performance</h3>
-            <table border="1" cellPadding="5">
-              <thead>
-                <tr>
-                  <th>Test</th>
-                  <th>Marks</th>
-                  <th>Max Marks</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tests.map(test => {
-                  const mark = queriedStudent.marks[test.title];
-                  const percentage = mark !== undefined ? (mark / test.maxMarks) * 100 : null;
-                  const status = percentage !== null ? (percentage >= 33 ? "Pass" : "Fail") : "-";
-                  return (
-                    <tr key={test.title}>
-                      <td>{test.title}</td>
-                      <td>{mark ?? "N/A"}</td>
-                      <td>{test.maxMarks}</td>
-                      <td>{status}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            <h3>Progress Chart</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={tests.map(test => ({
-                  name: test.title,
-                  Marks: queriedStudent.marks[test.title] ?? 0,
-                }))}
-              >
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-                <Line type="monotone" dataKey="Marks" stroke="#8884d8" />
-              </LineChart>
-            </ResponsiveContainer>
-          </>
-        ) : (
-          <p>No student found with that roll number.</p>
-        )
+        <>{renderStudentProgress()}</>
       )}
     </div>
   );
